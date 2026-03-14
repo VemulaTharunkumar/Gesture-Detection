@@ -19,3 +19,5 @@ A modular Python application for controlling your computer using hand gestures.
    ```
    python app.py
    ```
+=======
+# Project1

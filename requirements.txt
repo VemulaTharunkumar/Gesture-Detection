@@ -2,3 +2,7 @@ flask
 opencv-python
 mediapipe
 pyautogui
+opencv-python
+mediapipe
+pyautogui
+Pillow
