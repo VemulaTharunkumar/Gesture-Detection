@@ -1,6 +1,6 @@
 flask
 opencv-python
-mediapipe
+mediapipe==0.10.9
 pyautogui
 opencv-python
 mediapipe
