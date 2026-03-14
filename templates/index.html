@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Gesture Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --card-bg: #ffffff;
+      --page-bg: #e6f7ff;
+      --accent: #0ea5e9;
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--page-bg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    .stage {
+      position: relative;
+      width: min(1100px, 95vw);
+      height: min(700px, 95vh);
+    }
+
+    /* Main central block */
+    .card {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      width: min(520px, 92vw);
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 20px 16px;
+      display: grid;
+      gap: 14px;
+      text-align: center;
+      border: 1px solid #dbeafe;
+      transition: transform 0.3s ease; /* Hover effect */
+    }
+
+    .card:hover {
+      transform: translate(-50%, -50%) scale(1.05); /* Slightly bigger on hover */
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      color: #0f172a;
+    }
+
+    .video-wrap {
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      padding: 8px;
+      background: #f8fafc;
+    }
+
+    #stream {
+      width: 100%;
+      max-height: 340px;
+      object-fit: contain;
+      background: #000;
+      border-radius: 8px;
+      display: none; /* hidden until Start */
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s ease; /* Hover effect */
+    }
+    button:hover {
+      transform: scale(1.1); /* Slightly bigger on hover */
+    }
+
+    .start { background: #22c55e; color: #fff; }
+    .stop  { background: #f59e0b; color: #fff; }
+    .exit  { background: #ef4444; color: #fff; }
+
+    .hint {
+      font-size: 12px;
+      color: #334155;
+      opacity: .9;
+    }
+
+    /* Gesture guide tiles around the main block */
+    .guide {
+      position: absolute;
+      width: 160px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      text-align: center;
+      animation: jump 1.8s ease-in-out infinite;
+    }
+    .guide h3 {
+      margin: 4px 0 4px;
+      font-size: 14px;
+      color: #0f172a;
+    }
+    .guide p {
+      margin: 0;
+      font-size: 12px;
+      color: #475569;
+    }
+    /* four corners around the central block */
+    .g1 { top: 6%; left: 6%; animation-delay: .0s; }
+    .g2 { top: 6%; right: 6%; animation-delay: .2s; }
+    .g3 { bottom: 6%; left: 6%; animation-delay: .4s; }
+    .g4 { bottom: 6%; right: 6%; animation-delay: .6s; }
+
+    @keyframes jump {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* small screens: keep readable */
+    @media (max-width: 700px) {
+      .guide { width: 45%; }
+      .g1, .g2 { top: 2%; }
+      .g3, .g4 { bottom: 2%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <!-- Gesture guide tiles -->
+    <div class="guide g1">
+      <h3>Index ↑ → Play/Pause</h3>
+      <p>Extend only the index finger.</p>
+    </div>
+    <div class="guide g2">
+      <h3>Index+Middle ↑ → Volume Up</h3>
+      <p>Extend index + middle fingers.</p>
+    </div>
+    <div class="guide g3">
+      <h3>Thumb ↑ → Volume Down</h3>
+      <p>Extend only the thumb.</p>
+    </div>
+    <div class="guide g4">
+      <h3>Four Fingers ↑ → Forward</h3>
+      <p>Extend index+middle+ring+pinky.</p>
+      <p class="hint">Thumb+pinky only → Rewind</p>
+    </div>
+
+    <!-- Central control card -->
+    <div class="card">
+      <h1>Control your media with gestures</h1>
+      <div class="video-wrap">
+        <img id="stream" alt="Camera stream will appear here">
+      </div>
+      <div class="btn-row">
+        <button class="start" id="btnStart">Start</button>
+        <button class="stop"  id="btnStop">Stop</button>
+        <button class="exit"  id="btnExit">Exit</button>
+      </div>
+      <div class="hint">Press <strong>Start</strong> to open camera & begin detection. <strong>Stop</strong> closes the camera. <strong>Exit</strong> stops server.</div>
+    </div>
+  </div>
+
+  <script>
+    const streamImg = document.getElementById('stream');
+    const btnStart  = document.getElementById('btnStart');
+    const btnStop   = document.getElementById('btnStop');
+    const btnExit   = document.getElementById('btnExit');
+
+    function api(path) {
+      return fetch(path, { method: 'POST' })
+        .then(r => r.json())
+        .catch(() => ({ ok:false }));
+    }
+
+    btnStart.addEventListener('click', async () => {
+      const res = await api('/start');
+      if (res.ok) {
+        streamImg.src = '/video?ts=' + Date.now();
+        streamImg.style.display = 'block';
+      }
+    });
+
+    btnStop.addEventListener('click', async () => {
+      const res = await api('/stop');
+      if (res.ok) {
+        streamImg.removeAttribute('src');
+        streamImg.style.display = 'none';
+      }
+    });
+
+    btnExit.addEventListener('click', async () => {
+      streamImg.removeAttribute('src');
+      streamImg.style.display = 'none';
+      await api('/stop');
+      try { await api('/exit'); } catch (e) {}
+      btnExit.textContent = 'Exiting...';
+      btnExit.disabled = true;
+      setTimeout(() => { btnExit.textContent = 'Exited'; }, 500);
+    });
+  </script>
+</body>
+</html>
